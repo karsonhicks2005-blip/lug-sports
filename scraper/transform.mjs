@@ -125,6 +125,9 @@ export function transformLeague(raw, divmap = {}) {
 export function mergeLeague(prev, fresh, { keepPeople = true, mergeGames = true } = {}) {
   if (!prev) return fresh;
   const out = { ...fresh };
+  // The season picker on a standings page sometimes shows another season's name (seen on
+  // pickleball). In a fast refresh the season itself can't change, so keep the full read's name.
+  if (mergeGames && prev.ss) out.ss = prev.ss;
   if (keepPeople) {
     if (!fresh.p.length) out.p = prev.p;
     if (!fresh.gk.length) out.gk = prev.gk;
