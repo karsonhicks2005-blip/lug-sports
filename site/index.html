@@ -48,13 +48,13 @@ img { max-width: 100%; }
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html { height: 100%; } body { min-height: 100%; box-sizing: border-box; }
 body { background: var(--ground); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--orange); }
 :focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
-.app { max-width: 460px; margin: 0 auto; min-height: 100%; background: var(--bg); display: flex; flex-direction: column; border-left: 1px solid #141414; border-right: 1px solid #141414; }
+.app { max-width: 460px; margin: 0 auto; min-height: calc(100vh - env(safe-area-inset-top, 0px)); min-height: calc(100dvh - env(safe-area-inset-top, 0px)); background: var(--bg); display: flex; flex-direction: column; border-left: 1px solid #141414; border-right: 1px solid #141414; }
 .scroll { flex: 1; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; }
 .brand { font-family: var(--display); font-weight: 800; font-style: italic; font-size: 30px; letter-spacing: .03em; line-height: 1; }
@@ -591,8 +591,12 @@ table.st tr.click:hover td { background: var(--surface-2); }
     var h = subhead(c, "Schedule");
     var up = st.sched === "upcoming";
     h += '<div class="seg" role="tablist"><button role="tab" aria-selected="' + up + '" data-act="sched" data-v="upcoming">Upcoming · ' + c.upcoming.length + '</button><button role="tab" aria-selected="' + !up + '" data-act="sched" data-v="results">Results · ' + c.results.length + "</button></div>";
+    return h + schedList(c, up);
+  }
+  function schedList(c, up) {
+    var h = "";
     var list = up ? c.upcoming : c.results.slice().reverse();
-    if (!list.length) return h + '<div class="card empty">' + (up ? "No upcoming games posted yet. LUG posts winter schedules a few weeks at a time." : "No results yet.") + "</div>";
+    if (!list.length) return '<div class="card empty">' + (up ? "No upcoming games posted yet. LUG posts winter schedules a few weeks at a time." : "No results yet.") + "</div>";
     var lastMonth = "";
     list.forEach(function (g) {
       var d = gdate(g), m = MON[d.getMonth()] + " " + d.getFullYear();
@@ -600,6 +604,19 @@ table.st tr.click:hover td { background: var(--surface-2); }
       var home = g[4] === c.t.n, r = resultFor(c, g);
       h += '<div class="game"><span class="d"><span class="dw">' + DOW[d.getDay()] + '</span><span class="dd">' + d.getDate() + '</span></span><span class="grow"><span class="ell" style="display:block;font-weight:600">' + (home ? "vs " : "@ ") + teamLink(c, oppOf(c, g)) + '</span><span class="ell" style="display:block;font-size:12px;color:var(--muted)">' + (home ? "Home" : "Away") + " · " + esc([g[7], g[8]].filter(Boolean).join(", ")) + (g[9] && g[9] !== "RS" ? " · " + esc(g[9]) : "") + '</span></span><button data-act="game" data-id="' + g[0] + '" aria-label="Game details" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px">' + (r ? '<span class="badge ' + r.k + '">' + r.text + "</span>" : '<span class="badge time">' + fmtTime(g) + "</span>") + ICON.chev + "</button></div>";
     });
+    return h;
+  }
+  // Opponent view: just their schedule (upcoming + past) and their player points.
+  function renderPeek(c) {
+    var t = c.t, h = peekBar(c);
+    var rank = c.d.t.slice().sort(function (a, b) { return (a.Rk || 99) - (b.Rk || 99); }).indexOf(t) + 1;
+    h += '<section class="card" style="padding:14px 16px" aria-label="Team"><div class="row">' + crest(t.n, "lg", c.l.k, t.id) + '<div class="grow"><h1 class="big" style="font-size:26px;margin:0">' + esc(t.n) + '</h1><div class="sub">' + esc(c.d.n) + " · " + recordStr(t) + (rank ? " · " + ordinal(rank) + " of " + c.d.t.length : "") + "</div></div></div></section>";
+    var up = st.sched === "upcoming";
+    h += '<h2 class="eyebrow" style="margin:6px 0 0">Schedule</h2>';
+    h += '<div class="seg" role="tablist"><button role="tab" aria-selected="' + up + '" data-act="sched" data-v="upcoming">Upcoming · ' + c.upcoming.length + '</button><button role="tab" aria-selected="' + !up + '" data-act="sched" data-v="results">Past · ' + c.results.length + "</button></div>";
+    h += schedList(c, up);
+    h += '<h2 class="eyebrow" style="margin:10px 0 0">Player points</h2>';
+    h += renderPoints(c, true);
     return h;
   }
   function renderStandings(c) {
@@ -638,9 +655,10 @@ table.st tr.click:hover td { background: var(--surface-2); }
     { k: "P", label: "Skaters (no position)", test: function (p) { return p === "P"; } },
     { k: "G", label: "Goalies", goalies: true }
   ];
-  function renderPoints(c) {
-    var h = subhead(c, "Points");
-    var ps0 = st.pts || (st.pts = { scope: "team", pos: "all", stat: "pts", more: false });
+  function renderPoints(c, peek) {
+    var h = peek ? "" : subhead(c, "Points");
+    var ps0 = peek ? (st.ppts || (st.ppts = { scope: "team", pos: "all", stat: "pts", more: false })) : (st.pts || (st.pts = { scope: "team", pos: "all", stat: "pts", more: false }));
+    if (peek) ps0.scope = "team";
     var hockey = isHockey(c.l.k);
     var divIds = {}; c.d.t.forEach(function (t) { divIds[t.id] = t.n; });
     var team = ps0.scope === "team";
@@ -648,7 +666,8 @@ table.st tr.click:hover td { background: var(--surface-2); }
     var goalies = c.l.gk.filter(function (p) { return team ? p[0] === c.t.id : divIds[p[0]] != null; });
     var anyDiv = c.l.p.some(function (p) { return divIds[p[0]] != null; }) || c.l.gk.some(function (p) { return divIds[p[0]] != null; });
 
-    h += '<div class="seg" role="tablist" aria-label="Leaders scope"><button role="tab" aria-selected="' + team + '" data-act="pts" data-f="scope" data-v="team">My team</button><button role="tab" aria-selected="' + !team + '" data-act="pts" data-f="scope" data-v="div">Division</button></div>';
+    if (!peek) h += '<div class="seg" role="tablist" aria-label="Leaders scope"><button role="tab" aria-selected="' + team + '" data-act="pts" data-f="scope" data-v="team">My team</button><button role="tab" aria-selected="' + !team + '" data-act="pts" data-f="scope" data-v="div">Division</button></div>';
+    if (peek && !skaters.length && !goalies.length && anyDiv) return h + '<div class="card empty">No player stats for ' + esc(c.t.n) + " yet.</div>";
     if (!anyDiv) return h + '<div class="card empty">LUG doesn’t publish player stats for ' + esc(c.sport.label.toLowerCase()) + ' on its stats site, so there are no leaders to show here.</div>';
 
     // position chips (hockey only; other sports list every player together)
@@ -844,8 +863,8 @@ table.st tr.click:hover td { background: var(--surface-2); }
       var c = (st.peek && ctx(st.peek)) || ctx(saved[active]);
       if (!st.peek || !ctx(st.peek)) st.peek = null;
       applyTheme(st.peek ? null : teamTheme(c.l.k, c.t.id));
-      var body = st.view === "signup" ? renderSignup(c) : st.view === "schedule" ? renderSchedule(c) : st.view === "standings" ? renderStandings(c) : st.view === "points" ? renderPoints(c) : st.view === "roster" ? renderRoster(c) : st.view === "game" ? renderGame(c) : renderHome(c);
-      html = '<div class="scroll">' + body + footer() + "</div>" + tabbar();
+      var body = st.peek && st.view !== "game" ? renderPeek(c) : st.view === "signup" ? renderSignup(c) : st.view === "schedule" ? renderSchedule(c) : st.view === "standings" ? renderStandings(c) : st.view === "points" ? renderPoints(c) : st.view === "roster" ? renderRoster(c) : st.view === "game" ? renderGame(c) : renderHome(c);
+      html = '<div class="scroll">' + body + footer() + "</div>" + (st.peek ? "" : tabbar());
     }
     var focusId = document.activeElement && document.activeElement.id, selEnd = focusId ? document.activeElement.selectionEnd : null;
     root.innerHTML = html;
@@ -889,11 +908,11 @@ table.st tr.click:hover td { background: var(--surface-2); }
       var si = saved.findIndex(function (s) { return s.k === vk && s.id === vid; });
       if (si >= 0) { st.peek = null; active = si; save("lug.active", active); }
       else st.peek = { k: vk, id: vid };
-      st.sched = "upcoming"; st.me = ""; go("home");
+      st.sched = "upcoming"; st.me = ""; st.ppts = null; go("home");
     }
     else if (a === "unpeek") { st.peek = null; go("home"); }
     else if (a === "save-peek") { var fp = findTeam(st.peek.k, st.peek.id); saved.push({ k: st.peek.k, id: st.peek.id, n: fp ? fp.t.n : "" }); active = saved.length - 1; save("lug.saved", saved); save("lug.active", active); st.peek = null; toast("Saved to your teams"); go("home"); }
-    else if (a === "pts") { var f = b.getAttribute("data-f"), v = b.getAttribute("data-v"); st.pts = st.pts || { scope: "team", pos: "all", stat: "pts" }; if (f === "more") st.pts.more = true; else { st.pts[f] = v; st.pts.more = false; } render(); }
+    else if (a === "pts") { var f = b.getAttribute("data-f"), v = b.getAttribute("data-v"), pk = st.peek ? "ppts" : "pts"; st[pk] = st[pk] || { scope: "team", pos: "all", stat: "pts" }; if (f === "more") st[pk].more = true; else { st[pk][f] = v; st[pk].more = false; } render(); }
     else if (a === "member") { var mc = (st.peek && ctx(st.peek)) || ctx(saved[active]); save(memberKey(mc), b.getAttribute("data-v") === "1"); st.me = ""; render(); if (b.getAttribute("data-v") === "1") toast("Marked you as on " + mc.t.n); }
     else if (a === "remove") { saved.splice(active, 1); active = 0; save("lug.saved", saved); save("lug.active", 0); go(saved.length ? "home" : "pick"); }
     else if (a === "tab") { go(b.getAttribute("data-v")); }
