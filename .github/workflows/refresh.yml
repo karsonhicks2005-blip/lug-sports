@@ -1,0 +1,62 @@
+name: Refresh LUG data
+
+on:
+  schedule:
+    # Fast refresh (standings, this week's schedule and scores). Times are UTC.
+    - cron: "*/15 21-23 * * *"   # 5pm–8pm Toronto (EDT): every 15 minutes
+    - cron: "*/15 0-5 * * *"     # 8pm–2am Toronto: every 15 minutes, when most LUG games finish
+    - cron: "7 6-20 * * *"       # daytime: once an hour
+    # Full nightly refresh (full schedules, players, goalies, logos, sign-up programs)
+    - cron: "41 8 * * *"         # 4:41am Toronto
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "fast or full"
+        default: fast
+        required: true
+
+concurrency:
+  group: lug-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      SITE_URL: ${{ vars.SITE_URL }}
+      DATA_SOURCE: ${{ vars.DATA_SOURCE || 'site' }}
+      DS_API_BASE: ${{ secrets.DS_API_BASE }}
+      DS_API_KEY: ${{ secrets.DS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install browser
+        if: env.DATA_SOURCE != 'api'
+        run: npx playwright install --with-deps chromium
+
+      - name: Pick mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT";
+          elif [ "${{ github.event.schedule }}" = "41 8 * * *" ]; then echo "mode=full" >> "$GITHUB_OUTPUT";
+          else echo "mode=fast" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Get the data that's live now
+        run: node scraper/fetch-current.mjs
+
+      - name: Refresh data
+        run: node scraper/refresh.mjs --mode=${{ steps.mode.outputs.mode }}
+
+      - name: Publish to Netlify
+        run: npx --yes netlify-cli@17 deploy --prod --dir site --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN" --message "data ${{ steps.mode.outputs.mode }} $(date -u +%FT%TZ)"
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
