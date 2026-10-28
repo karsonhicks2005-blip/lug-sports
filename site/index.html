@@ -315,7 +315,7 @@ table.st tr.click:hover td { background: var(--surface-2); }
   function satOf(h) { var r = h2r(h), mx = Math.max.apply(0, r), mn = Math.min.apply(0, r); return mx ? (mx - mn) / mx : 0; }
   function teamTheme(k, id) {
     var lg = logoOf(k, id); if (!lg || !lg.col) return null;
-    var cand = [lg.col[0], lg.col[1]].filter(Boolean);
+    var cand = [lg.col[0], lg.col[1], lg.col[3]].filter(Boolean);
     var acc = cand.filter(function (h) { return satOf(h) >= 0.3 && rl(h) > 0.02; })[0] || cand.filter(function (h) { return rl(h) > 0.05; })[0];
     if (!acc) return null;
     for (var i = 0; i < 12 && contrast(acc, "#0b0b0b") < 4.5; i++) acc = mixc(acc, "#ffffff", 0.15);

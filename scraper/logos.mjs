@@ -36,7 +36,9 @@ function colours(data) {
   const p = arr[0];
   if (!p) return null;
   const s = arr.slice(1).find((e) => Math.hypot(e.r - p.r, e.g - p.g, e.b - p.b) > 90 && e.share > 0.03);
-  return [hex(p), s ? hex(s) : null, +p.sat.toFixed(2)];
+  // A small but clearly coloured detail (gold trim on a black logo) is still the team's colour.
+  const acc = arr.filter((e) => e.sat >= 0.35 && e.lum > 30 && e.lum < 235 && e.share >= 0.008).sort((a, b) => b.share * b.sat - a.share * a.sat)[0];
+  return [hex(p), s ? hex(s) : null, +p.sat.toFixed(2), acc ? hex(acc) : null];
 }
 
 async function fetchBuf(url) {
@@ -66,7 +68,9 @@ export async function updateLogos(previous, teams, { concurrency = 6, log = cons
     const key = logoKeyFromUrl(t.logoUrl);
     if (!key) continue;
     (out.map[t.leagueKey] ||= {})[t.teamId] = key;
-    if (!out.logos[key] && !todo.has(key)) todo.set(key, t.logoUrl);
+    const have = out.logos[key];
+    // Logos saved before the accent colour was added (3 colour values) are redone once.
+    if ((!have || !have[1] || have[1].length < 4) && !todo.has(key)) todo.set(key, t.logoUrl);
   }
   const queue = [...todo.entries()];
   let done = 0, failed = 0;
