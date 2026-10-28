@@ -83,7 +83,7 @@ async function main() {
   {
     const before = readJson("logos.json", null);
     const logos = await updateLogos(before, logoTeams, { log });
-    if (JSON.stringify(logos.map) !== JSON.stringify(before?.map) || Object.keys(logos.logos).length !== Object.keys(before?.logos || {}).length) writeJson("logos.json", logos);
+    if (JSON.stringify(logos) !== JSON.stringify(before)) writeJson("logos.json", logos);
   }
 
   const updated = new Date().toISOString();
