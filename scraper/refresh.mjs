@@ -79,9 +79,11 @@ async function main() {
   if (!leagues.length) throw new Error("No leagues read; keeping previous data.");
   if (failures > leagues.length / 2) throw new Error(`${failures} leagues failed; keeping previous data.`);
 
-  if (MODE === "full" || !fs.existsSync(path.join(DATA_DIR, "logos.json"))) {
-    const logos = await updateLogos(readJson("logos.json", null), logoTeams, { log });
-    writeJson("logos.json", logos);
+  // Every run: new teams get their logo within 15 minutes; logos already saved aren't downloaded again.
+  {
+    const before = readJson("logos.json", null);
+    const logos = await updateLogos(before, logoTeams, { log });
+    if (JSON.stringify(logos.map) !== JSON.stringify(before?.map) || Object.keys(logos.logos).length !== Object.keys(before?.logos || {}).length) writeJson("logos.json", logos);
   }
 
   const updated = new Date().toISOString();

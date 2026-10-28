@@ -53,6 +53,11 @@ export async function readStandings(page, L, S) {
   await page.goto(`${BASE}/stats#/${L}/standings${S ? "?season_id=" + S : ""}`, { waitUntil: "domcontentloaded" });
   await waitFor(page, () => document.querySelector('main table tbody tr a[href*="/team/"]') || /disabled|no standings/i.test(document.querySelector("main")?.innerText || ""));
   await sleep(1500);
+  // Big leagues render their logos a moment after the team names; wait for most of them.
+  await waitFor(page, () => {
+    const links = [...document.querySelectorAll('main table tbody tr a[href*="/team/"]')];
+    return links.length && links.filter((x) => /team-logo_url-/.test(x.querySelector("img")?.getAttribute("src") || "")).length >= links.length * 0.9;
+  }, 15000);
   return page.evaluate(() => {
     const main = document.querySelector("main");
     const sel = document.querySelector('select[ng-model*="season"]');

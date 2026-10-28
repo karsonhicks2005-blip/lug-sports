@@ -59,7 +59,8 @@ export async function processLogo(sampleUrl, key) {
 
 // teams: [{ leagueKey, teamId, logoUrl }]
 export async function updateLogos(previous, teams, { concurrency = 6, log = console.log } = {}) {
-  const out = { map: {}, logos: { ...(previous?.logos || {}) } };
+  // Start from the earlier matches, so a team whose logo didn't load this time keeps the one it had.
+  const out = { map: JSON.parse(JSON.stringify(previous?.map || {})), logos: { ...(previous?.logos || {}) } };
   const todo = new Map();
   for (const t of teams) {
     const key = logoKeyFromUrl(t.logoUrl);
