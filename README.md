@@ -5,7 +5,7 @@ This folder has two parts:
 | Part | What it does |
 |---|---|
 | `site/` | The phone app. It's a website people "Add to Home Screen". It loads scores and schedules from `site/data/`. |
-| `scraper/` and `.github/workflows/refresh.yml` | A job that runs on GitHub on a timer. It reads lugsports.com, rebuilds `site/data/`, and publishes the site to Netlify. |
+| `scraper/` and `.github/workflows/refresh.yml` | A job that runs on GitHub on a timer. It reads lugsports.com, rebuilds `site/data/`, and publishes the site to GitHub Pages. |
 
 The app checks for new data every 5 minutes while it's open, whenever it's reopened, and when you pull down or tap **Refresh**.
 
@@ -31,20 +31,12 @@ GitHub can start scheduled jobs a few minutes late when it's busy. To change the
    - drag the files into GitHub's "upload files" page, or
    - from a terminal: `git init && git add . && git commit -m "LUG My Team" && git branch -M main && git remote add origin https://github.com/YOU/lug-my-team.git && git push -u origin main`
 
-### 2. Create the Netlify site
-1. Sign in at netlify.com. Go to **Add new site → Deploy manually** and drag in the `site` folder. The app is now live at a `*.netlify.app` address. You can add a custom domain later, e.g. `app.lugsports.com`.
-2. Copy two values:
-   - **Site ID**: Site configuration → General → Site details → *Site ID*
-   - **Access token**: User settings → Applications → Personal access tokens → *New access token*
+### 2. Turn on GitHub Pages
+In the repo, go to **Settings → Pages** and set **Source** to **GitHub Actions**. The app will live at `https://YOU.github.io/REPO/`.
+(GitHub Pages is free and has no limit that a 15-minute schedule hits. Netlify's free plan blocks new deploys once its monthly credits run out, which a 15-minute schedule does in about a day.)
 
-### 3. Connect them
-In the GitHub repo, go to **Settings → Secrets and variables → Actions**.
-
-| Add as | Name | Value |
-|---|---|---|
-| Secret | `NETLIFY_SITE_ID` | the Site ID |
-| Secret | `NETLIFY_AUTH_TOKEN` | the access token |
-| Variable | `SITE_URL` | your app's address, e.g. `https://lug-my-team.netlify.app` |
+### 3. Tell the job its address
+In the repo, go to **Settings → Secrets and variables → Actions → Variables** and add `SITE_URL` = the Pages address, e.g. `https://YOU.github.io/lug-sports`.
 
 ### 4. First run
 1. In the repo, open **Actions → Refresh LUG data → Run workflow**.

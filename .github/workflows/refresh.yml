@@ -19,9 +19,17 @@ concurrency:
   group: lug-refresh
   cancel-in-progress: false
 
+# Publishing to GitHub Pages needs these.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     timeout-minutes: 150
     env:
       SITE_URL: ${{ vars.SITE_URL }}
@@ -55,8 +63,10 @@ jobs:
       - name: Refresh data
         run: node scraper/refresh.mjs --mode=${{ steps.mode.outputs.mode }}
 
-      - name: Publish to Netlify
-        run: npx --yes netlify-cli@17 deploy --prod --dir site --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN" --message "data ${{ steps.mode.outputs.mode }} $(date -u +%FT%TZ)"
-        env:
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      - name: Package the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publish to GitHub Pages
+        uses: actions/deploy-pages@v4

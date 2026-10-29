@@ -13,11 +13,22 @@ if (!SITE) {
   console.log("SITE_URL not set; using the files already in site/data.");
   process.exit(0);
 }
+// Where the app used to live, so the first run on a new host starts from the latest data.
+const OLD_SITES = ["https://lugsports.netlify.app"];
+async function getText(f) {
+  let last;
+  for (const base of [SITE, ...OLD_SITES]) {
+    try {
+      const r = await fetch(`${base}/data/${f}?t=${Date.now()}`);
+      if (!r.ok) throw new Error(`${r.status} from ${base}`);
+      return await r.text();
+    } catch (e) { last = e; }
+  }
+  throw last;
+}
 for (const f of ["data.json", "logos.json", "reg.json"]) {
   try {
-    const r = await fetch(`${SITE}/data/${f}?t=${Date.now()}`);
-    if (!r.ok) throw new Error(String(r.status));
-    const text = await r.text();
+    const text = await getText(f);
     const live = JSON.parse(text); // only replace with valid JSON
     if (f === "logos.json") {
       // Union with the logos kept in the repo, so a run that missed some logos can't lose them for good.
