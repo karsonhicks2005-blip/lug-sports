@@ -32,7 +32,7 @@ jobs:
       name: github-pages
     timeout-minutes: 150
     env:
-      SITE_URL: ${{ vars.SITE_URL }}
+      SITE_URL: https://karsonhicks2005-blip.github.io/lug-sports
       DATA_SOURCE: ${{ vars.DATA_SOURCE || 'site' }}
       DS_API_BASE: ${{ secrets.DS_API_BASE }}
       DS_API_KEY: ${{ secrets.DS_API_KEY }}

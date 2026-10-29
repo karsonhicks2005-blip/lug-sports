@@ -36,7 +36,7 @@ In the repo, go to **Settings → Pages** and set **Source** to **GitHub Actions
 (GitHub Pages is free and has no limit that a 15-minute schedule hits. Netlify's free plan blocks new deploys once its monthly credits run out, which a 15-minute schedule does in about a day.)
 
 ### 3. Tell the job its address
-In the repo, go to **Settings → Secrets and variables → Actions → Variables** and add `SITE_URL` = the Pages address, e.g. `https://YOU.github.io/lug-sports`.
+Set `SITE_URL` in `.github/workflows/refresh.yml` to the Pages address, e.g. `https://YOU.github.io/lug-sports`.
 
 ### 4. First run
 1. In the repo, open **Actions → Refresh LUG data → Run workflow**.
