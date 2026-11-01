@@ -15,11 +15,13 @@ if (!SITE) {
 }
 // Where the app used to live, so the first run on a new host starts from the latest data.
 const OLD_SITES = ["https://lugsports.netlify.app"];
+// The data branch holds the newest files (raw files sit at its root, not under /data).
+const DATA_RAW = process.env.DATA_RAW || "";
 async function getText(f) {
   let last;
-  for (const base of [SITE, ...OLD_SITES]) {
+  for (const base of [DATA_RAW, SITE, ...OLD_SITES].filter(Boolean)) {
     try {
-      const r = await fetch(`${base}/data/${f}?t=${Date.now()}`);
+      const r = await fetch(base === DATA_RAW ? `${base}/${f}?t=${Date.now()}` : `${base}/data/${f}?t=${Date.now()}`);
       if (!r.ok) throw new Error(`${r.status} from ${base}`);
       return await r.text();
     } catch (e) { last = e; }

@@ -1,17 +1,16 @@
 name: Refresh LUG data
 
+# One long run keeps the data fresh: a fast refresh every 15 minutes and a full refresh
+# once a day (after 3am Toronto). GitHub often skips short scheduled runs, so instead each
+# run loops for nearly 6 hours, and these triggers just make sure a new loop starts when
+# the last one ends. Results go to the "data" branch, which the app reads directly.
 on:
   schedule:
-    # Fast refresh (standings, this week's schedule and scores). Times are UTC.
-    - cron: "*/15 21-23 * * *"   # 5pm–8pm Toronto (EDT): every 15 minutes
-    - cron: "*/15 0-5 * * *"     # 8pm–2am Toronto: every 15 minutes, when most LUG games finish
-    - cron: "7 6-20 * * *"       # daytime: once an hour
-    # Full nightly refresh (full schedules, players, goalies, logos, sign-up programs)
-    - cron: "41 8 * * *"         # 4:41am Toronto
+    - cron: "*/20 * * * *"
   workflow_dispatch:
     inputs:
       mode:
-        description: "fast or full"
+        description: "first refresh: fast or full (later ones decide for themselves)"
         default: fast
         required: true
 
@@ -19,23 +18,21 @@ concurrency:
   group: lug-refresh
   cancel-in-progress: false
 
-# Publishing to GitHub Pages needs these.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-    timeout-minutes: 150
+    timeout-minutes: 358
     env:
       SITE_URL: https://karsonhicks2005-blip.github.io/lug-sports
+      DATA_RAW: https://raw.githubusercontent.com/karsonhicks2005-blip/lug-sports/data
       DATA_SOURCE: ${{ vars.DATA_SOURCE || 'site' }}
       DS_API_BASE: ${{ secrets.DS_API_BASE }}
       DS_API_KEY: ${{ secrets.DS_API_KEY }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      FORCE_MODE: ${{ inputs.mode == 'full' && 'full' || '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,23 +47,5 @@ jobs:
         if: env.DATA_SOURCE != 'api'
         run: npx playwright install --with-deps chromium
 
-      - name: Pick mode
-        id: mode
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "mode=${{ inputs.mode }}" >> "$GITHUB_OUTPUT";
-          elif [ "${{ github.event.schedule }}" = "41 8 * * *" ]; then echo "mode=full" >> "$GITHUB_OUTPUT";
-          else echo "mode=fast" >> "$GITHUB_OUTPUT"; fi
-
-      - name: Get the data that's live now
-        run: node scraper/fetch-current.mjs
-
-      - name: Refresh data
-        run: node scraper/refresh.mjs --mode=${{ steps.mode.outputs.mode }}
-
-      - name: Package the site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - name: Publish to GitHub Pages
-        uses: actions/deploy-pages@v4
+      - name: Refresh every 15 minutes for the next ~6 hours
+        run: bash scraper/loop.sh

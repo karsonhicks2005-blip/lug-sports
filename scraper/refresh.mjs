@@ -87,7 +87,7 @@ async function main() {
   }
 
   const updated = new Date().toISOString();
-  writeJson("data.json", { updated, mode: MODE, leagues });
+  writeJson("data.json", { updated, mode: MODE, full_at: MODE === "full" ? updated : (prevData.full_at || null), leagues });
   writeJson("version.json", { updated, logos: fs.statSync(path.join(DATA_DIR, "logos.json")).mtimeMs | 0 });
   log(`done in ${Math.round((Date.now() - t0) / 1000)}s, ${failures} failed`);
 }

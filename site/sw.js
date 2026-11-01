@@ -3,7 +3,7 @@
 // - data/data.json (scores, schedules): always tries the network first so scores are fresh;
 //   falls back to the last copy after 4 seconds or when offline.
 // - data/logos.json and data/reg.json: network first too, so new logos show on the next open.
-const CACHE = "lug-my-team-v3";
+const CACHE = "lug-my-team-v4";
 const SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png",
@@ -43,6 +43,8 @@ self.addEventListener("fetch", (e) => {
     if (/\/data\/[a-z]+\.json$/.test(url.pathname)) e.respondWith(networkFirst(e.request, 4000));
     else if (url.pathname.endsWith("/") || url.pathname.endsWith("/index.html")) e.respondWith(networkFirst(e.request, 3000));
     else e.respondWith(staleWhileRevalidate(e.request));
+  } else if (url.hostname === "raw.githubusercontent.com") {
+    e.respondWith(networkFirst(e.request, 4000));
   } else if (/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) {
     e.respondWith(staleWhileRevalidate(e.request));
   }

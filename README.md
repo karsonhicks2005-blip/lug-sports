@@ -5,7 +5,7 @@ This folder has two parts:
 | Part | What it does |
 |---|---|
 | `site/` | The phone app. It's a website people "Add to Home Screen". It loads scores and schedules from `site/data/`. |
-| `scraper/` and `.github/workflows/refresh.yml` | A job that runs on GitHub on a timer. It reads lugsports.com, rebuilds `site/data/`, and publishes the site to GitHub Pages. |
+| `scraper/` and `.github/workflows/refresh.yml` | A job that runs on GitHub on a timer. It reads lugsports.com, pushes fresh data to the repo's `data` branch every 15 minutes, which the app reads. `pages.yml` publishes the app itself to GitHub Pages when its code changes. |
 
 The app checks for new data every 5 minutes while it's open, whenever it's reopened, and when you pull down or tap **Refresh**.
 
