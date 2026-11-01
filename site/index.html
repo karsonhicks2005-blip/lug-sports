@@ -268,11 +268,13 @@ table.st tr.click:hover td { background: var(--surface-2); }
     SPORTS.forEach(function (sp) { sp.leagues = []; });
     var now = Date.now(), win = 21 * 864e5;
     // LUG's menu can still list last season beside this one (e.g. two "College Hockey · USA").
-    // Keep only the newest season for each league name: the later season year, then the later last game.
-    var lastGame = function (l) { return ((/(20\d\d)/.exec(l.ss || "") || ["0000"])[0]) + "|" + l.g.reduce(function (m, g) { return g[1] > m ? g[1] : m; }, ""); };
-    var newest = {};
-    d.leagues.forEach(function (l) { var n = nameFor(l); if (!newest[n] || lastGame(l) > lastGame(newest[n])) newest[n] = l; });
-    d.leagues = d.leagues.filter(function (l) { return newest[nameFor(l)] === l; });
+    // Hide a league only when another league of the same LUG league number has the same name and a
+    // later season year. Leagues whose season can't be told apart are all kept, so no teams go missing.
+    var yearOf = function (l) { var m = /(20\d\d)/.exec(l.ss || ""); return m ? +m[1] : 0; };
+    d.leagues = d.leagues.filter(function (l) {
+      var y = yearOf(l); if (!y) return true;
+      return !d.leagues.some(function (o) { return o !== l && lidOf(o) === lidOf(l) && nameFor(o) === nameFor(l) && yearOf(o) > y; });
+    });
     d.leagues.forEach(function (l) {
       LEAGUES[l.k] = l; LNAME[l.k] = nameFor(l);
       var tile = tileFor(l);

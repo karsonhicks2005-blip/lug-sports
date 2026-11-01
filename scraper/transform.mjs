@@ -127,11 +127,14 @@ export function mergeLeague(prev, fresh, { keepPeople = true, mergeGames = true 
   const out = { ...fresh };
   // The season picker on a standings page sometimes shows another season's name (seen on
   // pickleball). In a fast refresh the season itself can't change, so keep the full read's name.
-  if (mergeGames && prev.ss) out.ss = prev.ss;
+  if ((mergeGames || !fresh.ss) && prev.ss) out.ss = prev.ss;
   if (keepPeople) {
     if (!fresh.p.length) out.p = prev.p;
     if (!fresh.gk.length) out.gk = prev.gk;
   }
+  // A read that came back with far fewer games than before (page slow to load, Load More stuck)
+  // must not wipe the schedule: merge into the previous games instead of replacing them.
+  if (!mergeGames && prev.g.length && fresh.g.length < prev.g.length * 0.8) mergeGames = true;
   if (mergeGames) {
     const byId = new Map(prev.g.map((g) => [g[0], g]));
     for (const g of fresh.g) byId.set(g[0], g);
