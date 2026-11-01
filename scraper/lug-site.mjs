@@ -49,9 +49,16 @@ export async function discoverLeagues(page, extra = []) {
 }
 
 // ---------- standings (with division names, team ids and logo urls) ----------
+// LUG's stats site is one page app: going to another league's address only changes the part after #,
+// so the old league's tables can still be on screen. Load a blank page first so every read starts fresh.
+async function freshGoto(page, url) {
+  await page.goto("about:blank");
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+}
+
 export async function readStandings(page, L, S) {
-  await page.goto(`${BASE}/stats#/${L}/standings${S ? "?season_id=" + S : ""}`, { waitUntil: "domcontentloaded" });
-  await waitFor(page, () => document.querySelector('main table tbody tr a[href*="/team/"]') || /disabled|no standings/i.test(document.querySelector("main")?.innerText || ""));
+  await freshGoto(page, `${BASE}/stats#/${L}/standings${S ? "?season_id=" + S : ""}`);
+  await waitFor(page, `(() => { const a = document.querySelector('main table tbody tr a[href*="/team/"]'); return (a && a.getAttribute("href").includes("${L}/team/")) || /disabled|no standings/i.test(document.querySelector("main")?.innerText || ""); })()`);
   await sleep(1500);
   // Big leagues render their logos a moment after the team names; wait for most of them.
   await waitFor(page, () => {
@@ -89,7 +96,7 @@ export async function readStandings(page, L, S) {
 // ---------- schedule ----------
 // full = every game of the season (slow, uses Load More); otherwise the site's "current schedule" window.
 export async function readSchedule(page, L, S, { full = false } = {}) {
-  await page.goto(`${BASE}/stats#/${L}/schedule?season_id=${S}${full ? "&all" : ""}`, { waitUntil: "domcontentloaded" });
+  await freshGoto(page, `${BASE}/stats#/${L}/schedule?season_id=${S}${full ? "&all" : ""}`);
   await waitFor(page, () => document.querySelector("main div.table-scroll table tbody tr") || /No games are scheduled/i.test(document.querySelector("main")?.innerText || ""));
   await sleep(1500);
   if (full) {
@@ -123,7 +130,7 @@ export async function readSchedule(page, L, S, { full = false } = {}) {
 export async function readLeaders(page, L, S, type) {
   const all = [];
   let headers = null;
-  await page.goto(`${BASE}/stats#/${L}/standings?season_id=${S}`, { waitUntil: "domcontentloaded" });
+  await freshGoto(page, `${BASE}/stats#/${L}/standings?season_id=${S}`);
   await sleep(2000);
   for (let p = 1; p < 400; p++) {
     let got = null;
@@ -143,6 +150,7 @@ export async function readLeaders(page, L, S, type) {
         }));
         return { headers, rows };
       });
+      if (got && got.rows.length && !got.rows.some((r) => r.ids.some((x) => x.startsWith(L + "/team/")))) got = null; // another league's table
     }
     if (!got) break;
     headers = got.headers;

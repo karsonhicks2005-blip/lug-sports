@@ -40,6 +40,8 @@ async function main() {
       const key = leagueKey(s);
       try {
         const st = await src.readStandings(page, s.league_id, s.season_id);
+        const links = st.tables.flatMap((tb) => tb.rows.flatMap((r) => r.ids));
+        if (links.length && !links.some((x) => x.startsWith(s.league_id + "/team/"))) throw new Error("page still showed another league");
         const raw = { ...s, season_label: st.season_label, standings: st.tables, schedule: [], players: null, goalies: null };
         if (s.season_id) {
           raw.schedule = await src.readSchedule(page, s.league_id, s.season_id, { full: MODE === "full" || !prevByKey.has(key) });
