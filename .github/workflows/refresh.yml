@@ -32,7 +32,7 @@ jobs:
       DS_API_BASE: ${{ secrets.DS_API_BASE }}
       DS_API_KEY: ${{ secrets.DS_API_KEY }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      FORCE_MODE: ${{ inputs.mode == 'full' && 'full' || '' }}
+      FORCE_MODE: ${{ inputs.mode }}
     steps:
       - uses: actions/checkout@v4
 
