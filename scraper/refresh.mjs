@@ -36,12 +36,22 @@ async function main() {
   try {
     const seasons = await src.discoverLeagues(page, EXTRA_SEASONS);
     log(`mode=${MODE} source=${SOURCE} seasons=${seasons.length}`);
+    let lastLid = null;
+    const newestYear = {};
     for (const s of seasons) {
       const key = leagueKey(s);
       try {
         const st = await src.readStandings(page, s.league_id, s.season_id);
         const links = st.tables.flatMap((tb) => tb.rows.flatMap((r) => r.ids));
-        if (links.length && !links.some((x) => x.startsWith(s.league_id + "/team/"))) throw new Error("page still showed another league");
+        // Stale page: every team link still belongs to the league read just before this one.
+        if (lastLid && lastLid !== s.league_id && links.length && links.every((x) => x.startsWith(lastLid + "/team/"))) throw new Error("page still showed the previous league");
+        lastLid = (links[0] || "").split("/")[0] || s.league_id;
+        // Skip a past season when a newer season of the same league was already read (LUG's menu
+        // still links a few). The app wouldn't show it, and reading its players takes minutes.
+        const year = +(/(20\d\d)/.exec(st.season_label || "") || [0])[0];
+        const kind = s.league_id + "|" + (st.season_label || "").replace(/20\d\d(-\d\d)?/g, "").trim();
+        if (year && newestYear[kind] > year) { log(`${key} ${st.season_label}: skipped, older than a season already read`); continue; }
+        if (year) newestYear[kind] = Math.max(newestYear[kind] || 0, year);
         const raw = { ...s, season_label: st.season_label, standings: st.tables, schedule: [], players: null, goalies: null };
         if (s.season_id) {
           raw.schedule = await src.readSchedule(page, s.league_id, s.season_id, { full: MODE === "full" || !prevByKey.has(key) });
